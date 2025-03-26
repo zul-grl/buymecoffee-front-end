@@ -28,7 +28,7 @@ const SignIn = () => {
   });
   const router = useRouter();
   function onSubmit(values: z.infer<typeof formSchema>) {
-    router.push("/");
+    router.push("/createProfile");
     console.log(values);
   }
   return (
