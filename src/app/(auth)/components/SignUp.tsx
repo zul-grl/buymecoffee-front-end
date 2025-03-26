@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -33,7 +32,7 @@ const emailPasswordSchema = z.object({
   }),
 });
 
-const SignUpPage = () => {
+const SignUp = () => {
   const [step, setStep] = useState(1);
   const [username, setUsername] = useState("");
   const router = useRouter();
@@ -60,12 +59,12 @@ const SignUpPage = () => {
 
   function handleFinalSubmit(values: z.infer<typeof emailPasswordSchema>) {
     console.log({ username, ...values });
-    router.push("/auth/sign-in");
+    router.push("/sign-in");
   }
 
   return (
     <div className="flex justify-center items-center w-[50vw] relative">
-      <Link href={"/auth/sign-in"}>
+      <Link href={"/sign-in"}>
         <Button
           variant={"outline"}
           className="absolute top-[32px] right-[80px]"
@@ -143,4 +142,4 @@ const SignUpPage = () => {
   );
 };
 
-export default SignUpPage;
+export default SignUp;

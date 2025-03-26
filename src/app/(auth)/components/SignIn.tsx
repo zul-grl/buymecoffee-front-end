@@ -4,16 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Form } from "@/components/ui/form";
 import { InputForm } from "../components/InputForm";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -27,7 +18,7 @@ const formSchema = z.object({
   }),
 });
 
-const SignInPage = () => {
+const SignIn = () => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -42,7 +33,7 @@ const SignInPage = () => {
   }
   return (
     <div className="w-[50vw] h-screen flex justify-center relative items-center">
-      <Link href={"/auth/sign-up"}>
+      <Link href={"/sign-up"}>
         <Button
           variant={"outline"}
           className="absolute top-[32px] right-[80px]"
@@ -78,4 +69,4 @@ const SignInPage = () => {
   );
 };
 
-export default SignInPage;
+export default SignIn;

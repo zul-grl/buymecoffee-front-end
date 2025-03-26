@@ -9,7 +9,9 @@ export default function RootLayout({
   return (
     <div className="flex w-screen h-screen">
       <div className="bg-amber-400 w-[50vw] flex justify-center items-center relative">
-        <Logo />
+        <div className="top-[32px] left-[80px] absolute">
+          <Logo />
+        </div>
         <div className="text-foreground flex flex-col gap-10 items-center max-w-[455px]">
           <CoffeeLogo />
           <div>

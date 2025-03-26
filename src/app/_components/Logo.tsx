@@ -1,11 +1,14 @@
 import { Coffee } from "lucide-react";
+import Link from "next/link";
 
 export const Logo = () => {
   return (
-    <div className="text-black flex gap-2 absolute top-[32px] left-[80px]">
-      <Coffee color="black" />
-      <p className="font-bold text-lg">Buy Me Coffee</p>
-    </div>
+    <Link href={"/"}>
+      <div className="text-black flex gap-2">
+        <Coffee color="black" />
+        <p className="font-bold text-lg">Buy Me Coffee</p>
+      </div>
+    </Link>
   );
 };
 export const CoffeeLogo = () => {
