@@ -15,20 +15,23 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Camera } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+
 const formSchema = z.object({
   name: z.string().min(2, {
-    message: "Username must be at least 2 characters.",
+    message: "Please enter name",
   }),
-  media: z.string().min(2, {
-    message: "Username must be at least 2 characters.",
+  media: z.string().url().min(2, {
+    message: "Please enter a social link",
   }),
   about: z.string().min(2, {
-    message: "Username must be at least 2 characters.",
+    message: "Please enter info about yourself",
   }),
-  image: z.string().optional(),
+  image: z.any().refine((files) => files?.length >= 1, {
+    message: "Please enter image",
+  }),
 });
 
-const ProfileForm = () => {
+const ProfileForm = ({ Next }: { Next: () => void }) => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -40,10 +43,12 @@ const ProfileForm = () => {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
+    console.log("Form submitted with values:", values);
+    Next();
   }
+
   return (
-    <div className=" flex items-center">
+    <>
       <div className="max-w-[510px] w-full m-auto flex flex-col gap-6">
         <h3 className="font-bold text-2xl">Complete your profile page</h3>
         <Form {...form}>
@@ -51,22 +56,24 @@ const ProfileForm = () => {
             <FormField
               control={form.control}
               name="image"
-              render={({ field }) => (
+              render={({ field, fieldState }) => (
                 <FormItem>
                   <FormLabel>
-                    <div className="flex flex-col gap-2">
-                      Add photo
-                      <div className="flex justify-center rounded-full h-[160px] w-[160px] border-gray-500 border border-dashed items-center">
-                        <Camera color="gray" />
-                      </div>
+                    <div
+                      className={`flex justify-center rounded-full h-[160px] w-[160px] border items-center ${
+                        fieldState.error ? "border-red-500" : "border-gray-500"
+                      } border-dashed`}
+                    >
+                      <Camera color="gray" />
                     </div>
                   </FormLabel>
                   <FormControl>
                     <Input
                       type="file"
                       className="hidden"
-                      placeholder="shadcn"
-                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e.target.files);
+                      }}
                     />
                   </FormControl>
                   <FormDescription />
@@ -87,7 +94,6 @@ const ProfileForm = () => {
                       {...field}
                     />
                   </FormControl>
-                  <FormDescription />
                   <FormMessage />
                 </FormItem>
               )}
@@ -99,9 +105,11 @@ const ProfileForm = () => {
                 <FormItem>
                   <FormLabel>About</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Write about yourself here" />
+                    <Textarea
+                      placeholder="Write about yourself here"
+                      {...field}
+                    />
                   </FormControl>
-                  <FormDescription />
                   <FormMessage />
                 </FormItem>
               )}
@@ -111,20 +119,24 @@ const ProfileForm = () => {
               name="media"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Social media URL</FormLabel>
+                  <FormLabel>Social Media URL</FormLabel>
                   <FormControl>
                     <Input type="text" placeholder="https://" {...field} />
                   </FormControl>
-                  <FormDescription />
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button type="submit">Continue</Button>
+            <div className="flex justify-end">
+              <Button className="max-w-[250px] w-full" type="submit">
+                Continue
+              </Button>
+            </div>
           </form>
         </Form>
       </div>
-    </div>
+    </>
   );
 };
+
 export default ProfileForm;
