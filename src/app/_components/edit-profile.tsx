@@ -50,7 +50,6 @@ export function EditProfileDialog({
 }: EditProfileDialogProps) {
   const [formData, setFormData] = useState<UserData>(user);
   const [open, setOpen] = useState(false);
-
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {

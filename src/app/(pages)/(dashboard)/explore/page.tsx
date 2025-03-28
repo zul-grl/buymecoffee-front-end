@@ -23,7 +23,7 @@ export default function Explore() {
   });
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="w-full  overflow-scroll px-6  h-full mx-auto">
       <h1 className="text-2xl font-bold mb-6">Explore creators</h1>
 
       <div className="mb-5">

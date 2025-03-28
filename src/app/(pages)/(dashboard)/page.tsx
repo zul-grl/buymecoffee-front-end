@@ -27,7 +27,7 @@ export default function Home() {
         });
 
   return (
-    <div className="flex max-h-screen">
+    <div className="flex max-h-screen ">
       <main className="flex-1">
         <div className="max-w-4xl mx-auto">
           <Card className="p-6 mb-5">
@@ -83,7 +83,7 @@ export default function Home() {
             </div>
           </Card>
           <Card className="py-0">
-            <div className="p-6 max-h-[530px] overflow-scroll">
+            <div className="p-6 max-h-[700px] h-full overflow-scroll">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-semibold">Recent transactions</h3>
                 <DropdownMenu>

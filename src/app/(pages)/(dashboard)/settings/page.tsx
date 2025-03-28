@@ -142,7 +142,7 @@ export default function AccountSettings() {
   };
 
   return (
-    <div className="max-w-[650px] py-6 px-4 space-y-8">
+    <div className="max-w-[650px] w-full  overflow-scroll h-[100%] py-6 px-4 space-y-8">
       <h1 className="text-2xl font-bold">My account</h1>
       <Card>
         <CardHeader>

@@ -58,9 +58,7 @@ export default function RootLayout({
         </div>
       </aside>
 
-      <div className="max-h-[857px] w-full px-6  pt-[44px]  overflow-scroll">
-        {children}
-      </div>
+      <div className="max-h-[100%] w-full pt-[44px]">{children}</div>
     </div>
   );
 }

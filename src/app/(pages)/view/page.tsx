@@ -1,5 +1,7 @@
 "use client";
 
+import type React from "react";
+
 import { useState } from "react";
 import { Camera, Heart, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -125,13 +127,11 @@ export default function ViewPage() {
       ) : (
         <>
           <div
-            className="relative w-full h-64 z-0 bg-gray-200"
+            className="relative w-full h-64 z-0 bg-gray-200 bg-cover bg-center"
             style={{
               backgroundImage: previewImage
                 ? `url(${previewImage})`
                 : `url(${user.coverImage})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
             }}
           >
             <input
