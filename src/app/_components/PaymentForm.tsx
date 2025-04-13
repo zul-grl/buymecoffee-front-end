@@ -36,12 +36,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+import { useUser } from "../context/UserContext";
 
 const formSchema = z.object({
   country: z.string().nonempty({ message: "Please select a country" }),
   firstName: z.string().min(1, { message: "First name is required" }),
   lastName: z.string().min(1, { message: "Last name is required" }),
-  cardNumber: z.string().min(16, { message: "Enter a valid card number" }),
+  cardNumber: z.string().min(16, { message: "Card number must be 16 digits" }),
   expiryMonth: z.string().nonempty({ message: "Invalid month" }),
   expiryYear: z.string().nonempty({ message: "Invalid year" }),
   cvc: z.string().min(3, { message: "CVC is required" }),
@@ -58,7 +60,7 @@ const PaymentForm = () => {
   const [countries, setCountries] = useState<{ name: string }[]>([]);
   const [countryValue, setCountryValue] = useState("");
   const [open, setOpen] = useState(false);
-
+  const { userId } = useUser();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -82,9 +84,37 @@ const PaymentForm = () => {
       );
   }, []);
   const router = useRouter();
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    router.push("/");
-    console.log("Form submitted with values:", values);
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    try {
+      console.log("Submitting form with values:", values);
+
+      const response = await axios.post(`/api/bank-card`, {
+        ...values,
+        userId: userId,
+      });
+
+      if (response.status === 201) {
+        console.log("Bank card created successfully", response.data);
+        router.push("/");
+      } else {
+        console.error(
+          "Unexpected response status",
+          response.status,
+          response.data
+        );
+      }
+    } catch (error) {
+      console.error("Submission error:", error);
+      if (axios.isAxiosError(error)) {
+        console.error(
+          "Error details:",
+          error.response?.status,
+          error.response?.data
+        );
+      } else {
+        console.error("Unknown error:", error);
+      }
+    }
   }
 
   return (

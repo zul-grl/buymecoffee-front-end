@@ -1,29 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Form,
-  FormControl,
   FormField,
   FormItem,
   FormLabel,
+  FormControl,
   FormMessage,
 } from "@/components/ui/form";
+import { useEffect, useState } from "react";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import axios from "axios";
+import { useUser } from "@/app/context/UserContext";
+import { useProfile } from "@/app/context/ProfileContext";
+import { toast } from "sonner";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Popover,
   PopoverContent,
@@ -37,133 +31,268 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { ChevronsUpDown, Check } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader } from "@/app/_components/Loader";
 
-const mockUser = {
-  name: "John Doe",
-  about: "Product designer",
-  url: "https://twitter.com/johndoe",
-  avatar: "/avatar.jpg",
-  payment: {
-    country: "United States",
-    firstName: "John",
-    lastName: "Doe",
-    cardNumber: "4242424242424242",
-    expiryMonth: "01",
-    expiryYear: "2025",
-    cvc: "123",
-  },
-  successMessage: "Thank you for your purchase!",
-};
+const personalSchema = z.object({
+  name: z.string().min(2),
+  about: z.string().optional(),
+  socialMediaURL: z.string().url().or(z.literal("")).optional(),
+});
 
-const months = Array.from({ length: 12 }, (_, i) =>
-  String(i + 1).padStart(2, "0")
-);
-const years = Array.from({ length: 7 }, (_, i) =>
-  String(new Date().getFullYear() + i)
-);
+const passwordSchema = z
+  .object({
+    currentPassword: z.string().min(8),
+    newPassword: z.string().min(8),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
 
-const schemas = {
-  personal: z.object({
-    name: z.string().min(2, "Name must be at least 2 characters"),
-    about: z.string().optional(),
-    socialMediaUrl: z
-      .string()
-      .url("Please enter a valid URL")
-      .or(z.literal(""))
-      .optional(),
-  }),
-  password: z
-    .object({
-      newPassword: z.string().min(8, "Password must be at least 8 characters"),
-      confirmPassword: z.string(),
-    })
-    .refine((data) => data.newPassword === data.confirmPassword, {
-      message: "Passwords don't match",
-      path: ["confirmPassword"],
-    }),
-  payment: z.object({
-    country: z.string().nonempty("Please select a country"),
-    firstName: z.string().min(1, "First name is required"),
-    lastName: z.string().min(1, "Last name is required"),
-    cardNumber: z.string().min(16, "Card number must be 16 digits").max(16),
-    expiryMonth: z.string().nonempty("Month is required"),
-    expiryYear: z.string().nonempty("Year is required"),
-    cvc: z
-      .string()
-      .min(3, "CVC must be 3 digits")
-      .max(4, "CVC must be 3-4 digits"),
-  }),
-  success: z.object({
-    confirmationMessage: z
-      .string()
-      .min(10, "Message should be at least 10 characters"),
-  }),
-};
+const paymentSchema = z.object({
+  country: z.string().min(1).optional(),
+  firstName: z.string().min(1).optional(),
+  lastName: z.string().min(1).optional(),
+  cardNumber: z.string().length(16).optional(),
+  expiryMonth: z.string().length(2),
+  expiryYear: z.string().length(4),
+  cvc: z.string().min(3).max(4),
+});
+
+const successSchema = z.object({
+  successMessage: z.string().min(10),
+});
 
 export default function AccountSettings() {
+  const { userId } = useUser();
+  const { profile, bankCard, updateProfile, updateBankCard } = useProfile();
+  const [isUploading, setIsUploading] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [countries, setCountries] = useState<{ name: string }[]>([]);
   const [countryOpen, setCountryOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
+  const personalForm = useForm({
+    resolver: zodResolver(personalSchema),
+    defaultValues: {
+      name: "",
+      about: "",
+      socialMediaURL: "",
+    },
+  });
+
+  const passwordForm = useForm({
+    resolver: zodResolver(passwordSchema),
+  });
+
+  const paymentForm = useForm({
+    resolver: zodResolver(paymentSchema as any),
+    defaultValues: {
+      country: bankCard?.country,
+      firstName: bankCard?.firstName,
+      lastName: bankCard?.lastName,
+      cardNumber: bankCard?.cardNumber,
+      expiryMonth: bankCard?.expiryDate
+        ? String(new Date(bankCard.expiryDate).getMonth() + 1).padStart(2, "0")
+        : "",
+      expiryYear: bankCard?.expiryDate
+        ? String(new Date(bankCard.expiryDate).getFullYear())
+        : "",
+      cvc: bankCard?.cvc || "",
+    },
+  });
+
+  const successForm = useForm({
+    resolver: zodResolver(successSchema),
+    defaultValues: {
+      successMessage: "Thank you for your support!",
+    },
+  });
+  const expiryMonth = bankCard?.expiryDate
+    ? String(new Date(bankCard.expiryDate).getMonth() + 1).padStart(2, "0")
+    : "";
+
+  const expiryYear = bankCard?.expiryDate
+    ? String(new Date(bankCard.expiryDate).getFullYear())
+    : "";
   useEffect(() => {
-    fetch("https://restcountries.com/v3.1/all")
-      .then((res) => res.json())
-      .then((data) =>
-        setCountries(
-          data.map((country: any) => ({ name: country.name.common }))
-        )
-      );
-  }, []);
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const countriesResponse = await fetch(
+          "https://restcountries.com/v3.1/all"
+        );
+        const countriesData = await countriesResponse.json();
+        setCountries(countriesData.map((c: any) => ({ name: c.name.common })));
 
-  const forms = {
-    personal: useForm({
-      resolver: zodResolver(schemas.personal),
-      defaultValues: {
-        name: mockUser.name,
-        about: mockUser.about,
-        socialMediaUrl: mockUser.url,
-      },
-    }),
-    password: useForm({ resolver: zodResolver(schemas.password) }),
-    payment: useForm({
-      resolver: zodResolver(schemas.payment),
-      defaultValues: mockUser.payment,
-    }),
-    success: useForm({
-      resolver: zodResolver(schemas.success),
-      defaultValues: {
-        confirmationMessage: mockUser.successMessage,
-      },
-    }),
+        if (profile) {
+          personalForm.reset({
+            name: profile.name || "",
+            about: profile.about || "",
+            socialMediaURL: profile.socialMediaURL || "",
+          });
+          successForm.reset({
+            successMessage:
+              profile.successMessage || "Thank you for your support!",
+          });
+          setAvatarPreview(profile.avatarImage || null);
+        }
+
+        if (bankCard) {
+          paymentForm.reset({
+            country: bankCard.country || "",
+            firstName: bankCard.firstName || "",
+            lastName: bankCard.lastName || "",
+            cardNumber: bankCard.cardNumber || "",
+            expiryMonth:
+              expiryMonth || String(new Date().getMonth() + 1).padStart(2, "0"),
+            expiryYear: expiryYear || String(new Date().getFullYear()),
+            cvc: bankCard.cvc?.toString() || "",
+          });
+        }
+      } catch (error) {
+        console.error("Error loading data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [profile, bankCard]);
+
+  if (isLoading) {
+    return <Loader />;
+  }
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", "buy-me-coffee");
+
+      const response = await axios.post(
+        "https://api.cloudinary.com/v1_1/dzb3xzqxv/image/upload",
+        formData
+      );
+      setAvatarPreview(response.data.secure_url);
+    } catch (error) {
+      toast.error("Failed to upload image");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
-  const onSubmit = (formName: keyof typeof forms) => (data: any) => {
-    console.log(`${formName} updated:`, data);
+  const handlePersonalSubmit = async (data: z.infer<typeof personalSchema>) => {
+    try {
+      await updateProfile({
+        ...data,
+        avatarImage: avatarPreview || profile?.avatarImage,
+      });
+      toast.success("Profile updated successfully");
+    } catch (error) {
+      toast.error("Failed to update profile");
+    }
+  };
+
+  const handlePasswordSubmit = async (data: z.infer<typeof passwordSchema>) => {
+    try {
+      await axios.post("/api/auth/update", {
+        userId,
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+      });
+      toast.success("Password changed successfully");
+      passwordForm.reset();
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data?.error) {
+        toast.error(error.response.data.error);
+      } else {
+        toast.error("Failed to change password");
+      }
+    }
+  };
+
+  const handlePaymentSubmit = async (data: z.infer<typeof paymentSchema>) => {
+    try {
+      await updateBankCard({
+        country: data.country,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        cardNumber: data.cardNumber,
+        expiryYear: data.expiryYear,
+        expiryMonth: data.expiryMonth,
+        cvc: data.cvc,
+      });
+      toast.success("Payment details updated");
+    } catch (error) {
+      toast.error("Failed to update payment details");
+    }
+  };
+
+  const handleSuccessSubmit = async (data: z.infer<typeof successSchema>) => {
+    try {
+      await updateProfile({
+        ...profile,
+        successMessage: data.successMessage,
+      });
+      toast.success("Success message updated");
+    } catch (error) {
+      toast.error("Failed to update success message");
+    }
   };
 
   return (
-    <div className="max-w-[650px] w-full  overflow-scroll h-[100%] py-6 px-4 space-y-8">
-      <h1 className="text-2xl font-bold">My account</h1>
+    <div className="max-w-3xl mx-auto p-4 space-y-8">
+      <h1 className="text-2xl font-bold">Account Settings</h1>
       <Card>
         <CardHeader>
-          <CardTitle>Personal info</CardTitle>
+          <CardTitle>Personal Info</CardTitle>
         </CardHeader>
         <CardContent>
-          <Form {...forms.personal}>
+          <Form {...personalForm}>
             <form
-              onSubmit={forms.personal.handleSubmit(onSubmit("personal"))}
+              onSubmit={personalForm.handleSubmit(handlePersonalSubmit)}
               className="space-y-6"
             >
               <div className="flex flex-col items-center sm:items-start gap-4">
-                <p className="text-sm text-muted-foreground">Add photo</p>
-                <Avatar className="h-24 w-24">
-                  <AvatarImage src={mockUser.avatar} />
-                  <AvatarFallback>{mockUser.name.charAt(0)}</AvatarFallback>
-                </Avatar>
+                <p className="text-sm text-muted-foreground">Profile photo</p>
+                <label htmlFor="avatar-upload" className="cursor-pointer">
+                  <Avatar className="h-24 w-24">
+                    <AvatarImage src={avatarPreview || profile?.avatarImage} />
+                    <AvatarFallback>{profile?.name?.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                    disabled={isUploading}
+                  />
+                </label>
+                {isUploading && (
+                  <p className="text-sm text-muted-foreground">Uploading...</p>
+                )}
               </div>
 
               <FormField
-                control={forms.personal.control}
+                control={personalForm.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
@@ -177,7 +306,7 @@ export default function AccountSettings() {
               />
 
               <FormField
-                control={forms.personal.control}
+                control={personalForm.control}
                 name="about"
                 render={({ field }) => (
                   <FormItem>
@@ -191,42 +320,60 @@ export default function AccountSettings() {
               />
 
               <FormField
-                control={forms.personal.control}
-                name="socialMediaUrl"
+                control={personalForm.control}
+                name="socialMediaURL"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Social media URL</FormLabel>
+                    <FormLabel>Social Media URL</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input
+                        {...field}
+                        placeholder="https://example.com/username"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <Button type="submit" className="w-full">
-                Save changes
+              <Button type="submit" className="w-full" disabled={isUploading}>
+                Save Changes
               </Button>
             </form>
           </Form>
         </CardContent>
       </Card>
+
       <Card>
         <CardHeader>
-          <CardTitle>Set a new password</CardTitle>
+          <CardTitle>Change Password</CardTitle>
         </CardHeader>
         <CardContent>
-          <Form {...forms.password}>
+          <Form {...passwordForm}>
             <form
-              onSubmit={forms.password.handleSubmit(onSubmit("password"))}
+              onSubmit={passwordForm.handleSubmit(handlePasswordSubmit)}
               className="space-y-4"
             >
               <FormField
-                control={forms.password.control}
+                control={passwordForm.control}
+                name="currentPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Current Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={passwordForm.control}
                 name="newPassword"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>New password</FormLabel>
+                    <FormLabel>New Password</FormLabel>
                     <FormControl>
                       <Input type="password" {...field} />
                     </FormControl>
@@ -236,11 +383,11 @@ export default function AccountSettings() {
               />
 
               <FormField
-                control={forms.password.control}
+                control={passwordForm.control}
                 name="confirmPassword"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Confirm password</FormLabel>
+                    <FormLabel>Confirm Password</FormLabel>
                     <FormControl>
                       <Input type="password" {...field} />
                     </FormControl>
@@ -250,7 +397,7 @@ export default function AccountSettings() {
               />
 
               <Button type="submit" className="w-full">
-                Save changes
+                Change Password
               </Button>
             </form>
           </Form>
@@ -258,16 +405,16 @@ export default function AccountSettings() {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Payment details</CardTitle>
+          <CardTitle>Payment Details</CardTitle>
         </CardHeader>
         <CardContent>
-          <Form {...forms.payment}>
+          <Form {...paymentForm}>
             <form
-              onSubmit={forms.payment.handleSubmit(onSubmit("payment"))}
+              onSubmit={paymentForm.handleSubmit(handlePaymentSubmit)}
               className="space-y-4"
             >
               <FormField
-                control={forms.payment.control}
+                control={paymentForm.control}
                 name="country"
                 render={({ field }) => (
                   <FormItem>
@@ -295,7 +442,10 @@ export default function AccountSettings() {
                                   key={country.name}
                                   value={country.name}
                                   onSelect={() => {
-                                    field.onChange(country.name);
+                                    paymentForm.setValue(
+                                      "country",
+                                      country.name
+                                    );
                                     setCountryOpen(false);
                                   }}
                                 >
@@ -321,11 +471,11 @@ export default function AccountSettings() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
-                  control={forms.payment.control}
+                  control={paymentForm.control}
                   name="firstName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>First name</FormLabel>
+                      <FormLabel>First Name</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -335,11 +485,11 @@ export default function AccountSettings() {
                 />
 
                 <FormField
-                  control={forms.payment.control}
+                  control={paymentForm.control}
                   name="lastName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Last name</FormLabel>
+                      <FormLabel>Last Name</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -350,11 +500,11 @@ export default function AccountSettings() {
               </div>
 
               <FormField
-                control={forms.payment.control}
+                control={paymentForm.control}
                 name="cardNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Card number</FormLabel>
+                    <FormLabel>Card Number</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -365,22 +515,24 @@ export default function AccountSettings() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
-                  control={forms.payment.control}
+                  control={paymentForm.control}
                   name="expiryMonth"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Month</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue />
+                            <SelectValue placeholder="MM" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent className="h-[200px]">
-                          {months.map((month) => (
+                        <SelectContent>
+                          {Array.from({ length: 12 }, (_, i) =>
+                            String(i + 1).padStart(2, "0")
+                          ).map((month) => (
                             <SelectItem key={month} value={month}>
                               {month}
                             </SelectItem>
@@ -391,24 +543,25 @@ export default function AccountSettings() {
                     </FormItem>
                   )}
                 />
-
                 <FormField
-                  control={forms.payment.control}
+                  control={paymentForm.control}
                   name="expiryYear"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Year</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue />
+                            <SelectValue placeholder="YYYY" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent className="h-[200px]">
-                          {years.map((year) => (
+                          {Array.from({ length: 7 }, (_, i) =>
+                            String(new Date().getFullYear() + i)
+                          ).map((year) => (
                             <SelectItem key={year} value={year}>
                               {year}
                             </SelectItem>
@@ -421,13 +574,13 @@ export default function AccountSettings() {
                 />
 
                 <FormField
-                  control={forms.payment.control}
+                  control={paymentForm.control}
                   name="cvc"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>CVC</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input type="password" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -436,7 +589,7 @@ export default function AccountSettings() {
               </div>
 
               <Button type="submit" className="w-full">
-                Save changes
+                Save Payment Details
               </Button>
             </form>
           </Form>
@@ -444,22 +597,26 @@ export default function AccountSettings() {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Success page</CardTitle>
+          <CardTitle>Success Page</CardTitle>
         </CardHeader>
         <CardContent>
-          <Form {...forms.success}>
+          <Form {...successForm}>
             <form
-              onSubmit={forms.success.handleSubmit(onSubmit("success"))}
+              onSubmit={successForm.handleSubmit(handleSuccessSubmit)}
               className="space-y-4"
             >
               <FormField
-                control={forms.success.control}
-                name="confirmationMessage"
+                control={successForm.control}
+                name="successMessage"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Confirmation message</FormLabel>
+                    <FormLabel>Thank You Message</FormLabel>
                     <FormControl>
-                      <Textarea rows={4} {...field} />
+                      <Textarea
+                        rows={4}
+                        {...field}
+                        placeholder="Message shown after donation"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -467,7 +624,7 @@ export default function AccountSettings() {
               />
 
               <Button type="submit" className="w-full">
-                Save changes
+                Save Message
               </Button>
             </form>
           </Form>

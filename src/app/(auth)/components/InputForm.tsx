@@ -1,4 +1,4 @@
-"use client";
+import React from "react";
 import {
   FormControl,
   FormField,
@@ -7,33 +7,46 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { UseFormReturn } from "react-hook-form";
 
-export function InputForm({
-  form,
-  name,
-  label,
-  type,
-  placeholder,
-}: {
-  form: any;
+interface InputFormProps {
   name: string;
   label: string;
+  placeholder?: string;
+  form: UseFormReturn<any>;
   type: string;
-  placeholder: string;
-}) {
+  onChange?: () => void;
+}
+
+export const InputForm = ({
+  name,
+  label,
+  placeholder,
+  form,
+  type,
+  onChange,
+}: InputFormProps) => {
   return (
     <FormField
       control={form.control}
       name={name}
       render={({ field }) => (
-        <FormItem className="min-w-[360px]">
+        <FormItem>
           <FormLabel>{label}</FormLabel>
           <FormControl>
-            <Input placeholder={placeholder} {...field} type={type} />
+            <Input
+              type={type}
+              placeholder={placeholder}
+              {...field}
+              onChange={(e) => {
+                field.onChange(e);
+                onChange && onChange();
+              }}
+            />
           </FormControl>
           <FormMessage />
         </FormItem>
       )}
     />
   );
-}
+};

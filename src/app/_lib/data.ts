@@ -1,4 +1,3 @@
-// lib/mock-data.ts
 export const mockUser = {
   id: 1,
   username: "baconpancakes1",

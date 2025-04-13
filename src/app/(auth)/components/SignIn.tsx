@@ -1,14 +1,13 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { InputForm } from "../components/InputForm";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-
+import { useUser } from "@/app/context/UserContext";
 const formSchema = z.object({
   email: z.string().email().min(12, {
     message: "Email must be at least 12 characters.",
@@ -19,6 +18,8 @@ const formSchema = z.object({
 });
 
 const SignIn = () => {
+  const { login, error, loading, clearError } = useUser();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -26,11 +27,11 @@ const SignIn = () => {
       password: "",
     },
   });
-  const router = useRouter();
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    router.push("/createProfile");
-    console.log(values);
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    await login(values.email, values.password);
   }
+
   return (
     <div className="w-[50vw] h-screen flex justify-center relative items-center">
       <Link href={"/sign-up"}>
@@ -43,6 +44,11 @@ const SignIn = () => {
       </Link>
       <div className="p-6">
         <h3 className="text-2xl mb-6 font-bold">Welcome back</h3>
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <InputForm
@@ -51,6 +57,7 @@ const SignIn = () => {
               label="Email"
               form={form}
               type="email"
+              onChange={() => error && clearError()}
             />
             <InputForm
               name="password"
@@ -58,9 +65,10 @@ const SignIn = () => {
               placeholder="Enter password here"
               form={form}
               type="password"
+              onChange={() => error && clearError()}
             />
-            <Button type="submit" className="w-full">
-              Submit
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Signing in..." : "Submit"}
             </Button>
           </form>
         </Form>
