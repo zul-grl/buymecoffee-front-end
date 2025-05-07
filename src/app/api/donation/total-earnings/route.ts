@@ -1,13 +1,13 @@
 import { ApiResponse, DonationStats } from "@/app/_lib/type";
 import { NextResponse } from "next/server";
-import { runQuery } from "../../../../../../util/qeuryService";
+import { runQuery } from "../../../../../util/qeuryService";
 
-export async function GET(
-  request: Request,
-  { params }: { params: { userId: string } }
+export async function POST(
+  request: Request
 ): Promise<NextResponse<ApiResponse<DonationStats>>> {
   try {
-    const userId = parseInt(params.userId);
+    const { userId } = await request.json();
+
     if (isNaN(userId)) {
       return NextResponse.json(
         { success: false, error: "Invalid user ID" },

@@ -1,13 +1,12 @@
 import { ApiResponse, Profile } from "@/app/_lib/type";
 import { NextResponse } from "next/server";
-import { runQuery } from "../../../../../../util/qeuryService";
+import { runQuery } from "../../../../../util/qeuryService";
 
-export async function GET(
-  request: Request,
-  { params }: { params: { username: string } }
+export async function POST(
+  request: Request
 ): Promise<NextResponse<ApiResponse<Profile>>> {
   try {
-    const { username } = params;
+    const { username } = await request.json();
 
     if (!username?.trim()) {
       return NextResponse.json(

@@ -101,7 +101,6 @@ const ProfileForm = ({ Next }: { Next: () => void }) => {
 
     try {
       const imageUrl = await uploadImage(imageFile);
-      console.log("Image uploaded to:", imageUrl);
       const submissionData = {
         userId: userId,
         name: values.name,
@@ -110,14 +109,9 @@ const ProfileForm = ({ Next }: { Next: () => void }) => {
         socialMediaURL: values.media,
       };
 
-      console.log("Submitting:", submissionData);
       const response = await axios.post("/api/profile", submissionData, {});
-
-      console.log("Profile created:", response.data);
       Next();
     } catch (error) {
-      console.error("Full error:", error);
-
       if (axios.isAxiosError(error)) {
         const errorMessage =
           error.response?.data?.message || "Profile creation failed";

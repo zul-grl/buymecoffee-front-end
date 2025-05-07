@@ -86,7 +86,6 @@ const PaymentForm = () => {
   const router = useRouter();
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      console.log("Submitting form with values:", values);
 
       const response = await axios.post(`/api/bank-card`, {
         ...values,
@@ -94,7 +93,6 @@ const PaymentForm = () => {
       });
 
       if (response.status === 201) {
-        console.log("Bank card created successfully", response.data);
         router.push("/");
       } else {
         console.error(

@@ -18,7 +18,6 @@ import {
 } from "../_lib/type";
 import axios from "axios";
 import { useUser } from "./UserContext";
-import { profile } from "console";
 
 type DonationContextType = {
   donations: DonationWithDonor[];
@@ -42,7 +41,7 @@ const DonationContext = createContext<DonationContextType | undefined>(
 
 export function DonationProvider({ children }: { children: ReactNode }) {
   const { userId } = useUser();
-  const [donations, setDonations] = useState<Donation[]>([]);
+  const [donations, setDonations] = useState<DonationWithDonor[]>([]);
   const [stats, setStats] = useState<DonationStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,19 +66,34 @@ export function DonationProvider({ children }: { children: ReactNode }) {
       try {
         const response = await axios.post<ApiResponse<Donation>>(
           "/api/donation/create-donation",
-          data
+          data,
+          {
+            headers: { "Content-Type": "application/json" },
+          }
         );
 
-        if (response.data.success) {
-          await refreshDonations();
+        if (!response.data.success) {
+          throw new Error(response.data.message || "Failed to create donation");
         }
 
+        await refreshDonations();
         return response.data;
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to create donation";
+        let errorMessage = "Failed to create donation";
+
+        if (axios.isAxiosError(err)) {
+          errorMessage = err.response?.data?.message || err.message;
+          console.error("API Error:", {
+            status: err.response?.status,
+            data: err.response?.data,
+          });
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+
         setError(errorMessage);
-        throw err;
+        console.error("Donation creation error:", errorMessage);
+        throw new Error(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -87,15 +101,18 @@ export function DonationProvider({ children }: { children: ReactNode }) {
     [refreshDonations]
   );
 
-  const fetchReceivedDonations = useCallback(async (profileId: number) => {
+  const fetchReceivedDonations = useCallback(async (userId: number) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get<ApiResponse<Donation[]>>(
-        `/api/donation/received/${profileId}`
+      const response = await axios.post<ApiResponse<DonationWithDonor[]>>(
+        `/api/donation/received`,
+        { userId }
       );
+
       setDonations(response.data.data || []);
     } catch (err) {
+      console.error("Error fetching donations:", err);
       setError(
         err instanceof Error ? err.message : "Failed to fetch donations"
       );
@@ -109,15 +126,18 @@ export function DonationProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get<ApiResponse<DonationStats>>(
-        `/api/donation/total-earnings/${userId}`
+      const response = await axios.post<ApiResponse<DonationStats>>(
+        `/api/donation/total-earnings`,
+        { userId }
       );
+
       if (response.data.data) {
         setStats(response.data.data);
         setTotalEarnings(response.data.data.totalEarnings || 0);
         setDonationCount(response.data.data.donationCount || 0);
       }
     } catch (err) {
+      console.error("Error fetching donation stats:", err);
       setError(
         err instanceof Error ? err.message : "Failed to fetch donation stats"
       );
@@ -130,20 +150,13 @@ export function DonationProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get<ApiResponse<Donation[]>>(
-        `/api/donation/search-donations/${params.userId}`,
-        {
-          params: {
-            minAmount: params.minAmount,
-            maxAmount: params.maxAmount,
-            startDate: params.startDate,
-            endDate: params.endDate,
-            donorName: params.donorName,
-          },
-        }
+      const response = await axios.post<ApiResponse<Donation[]>>(
+        `/api/donation/search-donations`,
+        params
       );
       return response.data.data || [];
     } catch (err) {
+      console.error("Error searching donations:", err);
       setError(
         err instanceof Error ? err.message : "Failed to search donations"
       );

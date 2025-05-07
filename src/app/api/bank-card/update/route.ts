@@ -6,11 +6,7 @@ export async function PATCH(
   request: Request
 ): Promise<NextResponse<ApiResponse<BankCard>>> {
   try {
-    // Parse request body
     const body = await request.json();
-    console.log("Received update data:", body); // Debug log
-
-    // Validate required fields
     if (!body?.bankCardId) {
       console.error("Missing bankCardId");
       return NextResponse.json(
@@ -20,8 +16,6 @@ export async function PATCH(
     }
 
     const { bankCardId, ...updateFields } = body;
-
-    // Check if any fields to update were provided
     if (Object.keys(updateFields).length === 0) {
       console.error("No fields to update provided");
       return NextResponse.json(
@@ -30,13 +24,11 @@ export async function PATCH(
       );
     }
 
-    // Prepare update query
     let query = `UPDATE "BankCard" SET `;
     const values: any[] = [];
     let paramCount = 1;
     const updates: string[] = [];
 
-    // Handle each possible field
     if (updateFields.country !== undefined) {
       updates.push(`country = $${paramCount++}`);
       values.push(updateFields.country);
@@ -61,8 +53,6 @@ export async function PATCH(
       updates.push(`cvc = $${paramCount++}`);
       values.push(updateFields.cvc);
     }
-
-    // Handle expiry date
     if (
       updateFields.expiryMonth !== undefined ||
       updateFields.expiryYear !== undefined
@@ -83,13 +73,9 @@ export async function PATCH(
       values.push(expiryDate);
     }
 
-    // Build final query
     query += updates.join(", ");
     query += ` WHERE id = $${paramCount} RETURNING *`;
     values.push(bankCardId);
-
-    console.log("Executing query:", query, values); // Debug log
-
     const result = await runQuery<BankCard>(query, values);
 
     if (result.length === 0) {

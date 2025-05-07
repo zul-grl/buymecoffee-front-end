@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Camera, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -25,23 +25,26 @@ import { useUser } from "@/app/context/UserContext";
 import { useProfile } from "@/app/context/ProfileContext";
 import axios from "axios";
 import { Loader } from "@/app/_components/Loader";
+import { toast } from "sonner";
 
 const formSchema = z.object({
-  coverImage: z.instanceof(File).optional(),
   amount: z.string().min(1, "Please select an amount"),
-  accountUrl: z.string().url("Please enter a valid URL").optional(),
+  accountUrl: z
+    .string()
+    .url("Please enter a valid URL")
+    .optional()
+    .or(z.literal("")),
   message: z.string().optional(),
 });
 
 export default function ViewPage() {
   const { username } = useParams();
-  const { createDonation, fetchReceivedDonations, donations } = useDonation();
+  const { createDonation, fetchReceivedDonations, donations, loading } =
+    useDonation();
   const { fetchProfileData } = useProfile();
   const [profile, setProfile] = useState<any>(null);
   const { userId } = useUser();
   const [showSuccess, setShowSuccess] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -56,67 +59,37 @@ export default function ViewPage() {
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        const response = await axios.get(`/api/profile/view/${username}`);
+        const response = await axios.post(`/api/profile/view`, { username });
         setProfile(response.data.data);
-
         fetchProfileData();
-        if (response.data.backgroundImage) {
-          setPreviewImage(response.data.backgroundImage);
-        }
       } catch (error) {
         console.error("Failed to load profile:", error);
+        toast("Failed to load profile");
       }
     };
     loadProfile();
   }, [username]);
-  const uploadImage = async (file: File) => {
-    const imageData = new FormData();
-    imageData.append("file", file);
-    imageData.append("upload_preset", "buy-me-coffee");
 
-    const response = await axios.post(
-      "https://api.cloudinary.com/v1_1/dzb3xzqxv/image/upload",
-      imageData
-    );
-    return response.data.secure_url;
-  };
-
-  const handleCoverImageChange = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    try {
-      const imageUrl = await uploadImage(file);
-      if (imageUrl) {
-        setPreviewImage(imageUrl);
-      }
-    } catch (error) {
-      console.error("Error uploading cover image:", error);
-    } finally {
-      setIsUploading(false);
-    }
-  };
-  console.log("Profile data:", profile);
   useEffect(() => {
-    const fetchDonations = async () => {
-      if (profile?.userId) {
-        try {
-          const userId = profile.userId;
-          fetchReceivedDonations(userId);
-        } catch (error) {
-          console.error("Failed to fetch donations:", error);
-        }
-      }
-    };
-    fetchDonations();
-  }, [profile?.id]);
+    if (profile?.userId) {
+      fetchReceivedDonations(profile.userId);
+    }
+  }, [profile?.userId, fetchReceivedDonations]);
+
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
-      if (!profile?.id || !userId) {
-        console.error("Missing required IDs");
+      if (!userId) {
+        toast("You must be logged in to make a donation");
+        console.error("User ID is missing - user may not be logged in");
+        return;
+      }
+      let recipientId;
+      if (profile?.userId) {
+        recipientId = profile.userId;
+      } else if (profile?.id) {
+        recipientId = profile.id;
+      } else {
+        toast("Cannot determine recipient user ID");
         return;
       }
 
@@ -125,28 +98,28 @@ export default function ViewPage() {
         specialMessage: data.message || undefined,
         socialURL: data.accountUrl || undefined,
         donorId: userId,
-        recipientId: profile.id,
+        recipientId: recipientId,
       };
 
       const response = await createDonation(donationData);
 
-      if (response && response.data) {
-        const donation = response.data;
-        if (donation) {
-          await fetchProfileData();
-          setShowSuccess(true);
-        }
+      if (response?.success) {
+        setShowSuccess(true);
+        await fetchReceivedDonations(recipientId);
+        toast("Donation created successfully!");
+      } else {
+        toast(response?.message || "Failed to create donation");
       }
     } catch (error) {
-      console.error("Failed to create donation:", error);
+      toast("Failed to create donation");
     }
   };
 
   const handleReturnToExplore = () => {
-    setShowSuccess(false);
     router.push("/explore");
   };
-  if (!profile && !donations) {
+
+  if (!profile) {
     return <Loader />;
   }
 
@@ -182,6 +155,7 @@ export default function ViewPage() {
               <Button
                 onClick={handleReturnToExplore}
                 className="bg-gray-900 w-[40%] hover:bg-gray-800 text-white"
+                disabled={loading}
               >
                 Return to explore
               </Button>
@@ -193,38 +167,11 @@ export default function ViewPage() {
           <div
             className="relative w-full h-64 z-0 bg-gray-200 bg-cover bg-center"
             style={{
-              backgroundImage: previewImage
-                ? `url(${previewImage})`
-                : profile?.backgroundImage
+              backgroundImage: profile?.backgroundImage
                 ? `url(${profile.backgroundImage})`
                 : "none",
             }}
-          >
-            <input
-              type="file"
-              id="coverImage"
-              accept="image/*"
-              className="hidden"
-              onChange={handleCoverImageChange}
-              disabled={isUploading}
-            />
-            <label
-              htmlFor="coverImage"
-              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
-            >
-              <Button variant="default" size="sm" asChild>
-                <div className="flex items-center">
-                  <Camera className="mr-2 h-4 w-4" />
-                  {isUploading
-                    ? "Uploading..."
-                    : previewImage
-                    ? "Change cover image"
-                    : "Add a cover image"}
-                </div>
-              </Button>
-            </label>
-          </div>
-
+          ></div>
           <div className="max-w-6xl mx-auto px-4 -mt-16">
             <div className="grid md:grid-cols-2 gap-8">
               <Card className="p-6 z-20">
@@ -232,6 +179,7 @@ export default function ViewPage() {
                   <div className="flex items-start gap-4">
                     <Avatar className="h-16 w-16">
                       <AvatarImage
+                        className="object-cover"
                         src={profile?.avatarImage}
                         alt={profile?.name}
                       />
@@ -257,21 +205,21 @@ export default function ViewPage() {
                     <p className="text-gray-700">{profile?.socialMediaURL}</p>
                   </div>
 
-                  <div>
+                  <div className="max-h-[300px] overflow-y-auto">
                     <h3 className="text-lg font-semibold mb-4">
                       Recent Supporters
                     </h3>
                     {donations.length > 0 ? (
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         {donations.map((donation) => (
                           <div
                             key={donation.id}
-                            className="flex items-center gap-3 p-4"
+                            className="flex items-center gap-2 p-4"
                           >
                             <img
                               src={donation.donorImage || "/default-avatar.png"}
                               alt={donation.donorName}
-                              className="w-10 h-10 rounded-full"
+                              className="w-10 h-10 rounded-full object-cover"
                             />
                             <div>
                               <p className="font-medium">
@@ -364,6 +312,7 @@ export default function ViewPage() {
                               <Input
                                 placeholder="buymeacoffee.com/yourusername"
                                 {...field}
+                                value={field.value || ""}
                               />
                             </FormControl>
                             <FormMessage />
@@ -392,8 +341,9 @@ export default function ViewPage() {
                       <Button
                         type="submit"
                         className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700"
+                        disabled={loading}
                       >
-                        Support
+                        {loading ? "Processing..." : "Support"}
                       </Button>
                     </div>
                   </Card>

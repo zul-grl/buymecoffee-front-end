@@ -18,8 +18,6 @@ const CreateProfile = () => {
     const getProfileData = async () => {
       const data: CompleteProfileResponse = await fetchProfileData();
 
-      console.log("saved step", data);
-
       if (!data.profile) {
         setStep(0);
       } else if (!data.bankCard) {

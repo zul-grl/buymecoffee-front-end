@@ -46,6 +46,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       const response = await axios.post("/api/profile/current-user", {
         userId,
       });
+
       const data = response.data;
       setBankCard(data.data.bankCard);
       setProfile(data.data.profile);
@@ -66,13 +67,13 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get<ApiResponse<Profile>>(
-        `/api/profile/view/${username}`
+      const response = await axios.post<ApiResponse<Profile>>(
+        `/api/profile/view`,
+        { username }
       );
 
       if (response.data.success && response.data.data) {
         setProfile(response.data.data);
-        console.log("Loaded profile data:", response.data.data);
         return response.data.data;
       } else {
         throw new Error(response.data.message || "Failed to load profile");

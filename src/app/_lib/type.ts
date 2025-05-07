@@ -49,6 +49,7 @@ export interface DonationWithDonor {
   donorName: string;
   donorImage?: string;
   donorEmail?: string;
+  socialURL?: string;
 }
 
 export type Donation = {

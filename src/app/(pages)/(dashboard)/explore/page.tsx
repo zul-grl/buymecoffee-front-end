@@ -91,6 +91,7 @@ export default function Explore() {
                       <div className="flex gap-2 items-center">
                         <Avatar className="h-16 w-16">
                           <AvatarImage
+                            className="object-cover"
                             src={creator.avatarImage}
                             alt={creator.name}
                           />

@@ -40,14 +40,25 @@ const formSchema = z.object({
 
 export default function ViewPage() {
   const { username } = useParams();
-  const { createDonation } = useDonation();
+  const { createDonation, fetchReceivedDonations, donations } = useDonation();
   const { profile, loadProfile } = useProfile();
   const { userId } = useUser();
   const [showSuccess, setShowSuccess] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const router = useRouter();
-
+  useEffect(() => {
+    const fetchDonations = async () => {
+      if (userId) {
+        try {
+          fetchReceivedDonations(userId);
+        } catch (error) {
+          console.error("Failed to fetch donations:", error);
+        }
+      }
+    };
+    fetchDonations();
+  }, [profile?.id]);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -104,7 +115,6 @@ export default function ViewPage() {
       setIsUploading(false);
     }
   };
-  console.log(profile?.backgroundImage);
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
       if (!profile?.id) {
@@ -156,6 +166,7 @@ export default function ViewPage() {
                 <div className="flex items-center gap-2 mb-4">
                   <Avatar className="h-10 w-10">
                     <AvatarImage
+                      className="object-cover"
                       src={profile?.avatarImage}
                       alt={profile?.name}
                     />
@@ -220,6 +231,7 @@ export default function ViewPage() {
                   <div className="flex items-start gap-4">
                     <Avatar className="h-16 w-16">
                       <AvatarImage
+                        className="object-cover"
                         src={profile?.avatarImage}
                         alt={profile?.name}
                       />
@@ -244,13 +256,46 @@ export default function ViewPage() {
                     </h3>
                     <p className="text-gray-700">{profile?.socialMediaURL}</p>
                   </div>
-                  <div>
+                  <div className="max-h-[300px] overflow-y-auto">
                     <h3 className="text-lg font-semibold mb-4">
-                      Thank You Message
+                      Recent Supporters
                     </h3>
-                    <p className="text-gray-700">
-                      {profile?.successMessage || "Thank you for your support!"}
-                    </p>
+                    {donations.length > 0 ? (
+                      <div className="space-y-3">
+                        {donations.map((donation) => (
+                          <div
+                            key={donation.id}
+                            className="flex items-center gap-2 p-4"
+                          >
+                            <img
+                              src={donation.donorImage || "/default-avatar.png"}
+                              alt={donation.donorName}
+                              className="w-10 h-10 rounded-full"
+                            />
+                            <div>
+                              <p className="font-medium">
+                                {donation.donorName} bought you $
+                                {donation.amount.toFixed(2)} coffee
+                              </p>
+                              {donation.specialMessage && (
+                                <p className="text-gray-600 italic">
+                                  "{donation.specialMessage}"
+                                </p>
+                              )}
+                              <p className="text-sm text-gray-500">
+                                {new Date(
+                                  donation.created_at
+                                ).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 italic">
+                        Be the first one to support {profile?.name}!
+                      </p>
+                    )}
                   </div>
                 </div>
               </Card>

@@ -1,27 +1,23 @@
-import { ApiResponse, Donation, DonationSearchParams } from "@/app/_lib/type";
+// donation/received/route.ts
+import { ApiResponse, Donation } from "@/app/_lib/type";
 import { NextResponse } from "next/server";
-import { runQuery } from "../../../../../../util/qeuryService";
+import { runQuery } from "../../../../../util/qeuryService";
 
-export async function GET(
-  request: Request,
-  { params }: { params: { userId: string } }
+export async function POST(
+  request: Request
 ): Promise<NextResponse<ApiResponse<Donation[]>>> {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = parseInt(params.userId);
+    // Parse the request body
+    const body = await request.json();
+    const { userId, minAmount, maxAmount, startDate, endDate, donorName } =
+      body;
 
-    if (isNaN(userId)) {
+    if (!userId || isNaN(Number(userId))) {
       return NextResponse.json(
         { error: "INVALID_USER_ID", message: "User ID must be a number" },
         { status: 400 }
       );
     }
-
-    const minAmount = searchParams.get("minAmount");
-    const maxAmount = searchParams.get("maxAmount");
-    const startDate = searchParams.get("startDate");
-    const endDate = searchParams.get("endDate");
-    const donorName = searchParams.get("donorName");
 
     let query = `
       SELECT 

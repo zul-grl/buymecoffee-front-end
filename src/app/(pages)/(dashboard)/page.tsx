@@ -18,6 +18,7 @@ import { useProfile } from "@/app/context/ProfileContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader } from "@/app/_components/Loader";
 import { DonationWithDonor } from "@/app/_lib/type";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
   const {
@@ -37,7 +38,12 @@ export default function Home() {
     DonationWithDonor[]
   >([]);
   const [isClient, setIsClient] = useState(false);
-
+  const router = useRouter();
+  useEffect(() => {
+    if (!userId) {
+      router.push("/sign-in");
+    }
+  }, [userId, router]);
   useEffect(() => {
     setIsClient(true);
     if (userId) {
@@ -214,36 +220,8 @@ export default function Home() {
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="gap-1">
-                        {dateFilter}
-                        <ChevronDown className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {["Last 30 days", "Last 90 days", "All time"].map(
-                        (period) => (
-                          <DropdownMenuItem
-                            key={period}
-                            onClick={() => {
-                              setDateFilter(period);
-                              setEarningsPeriod(period);
-                            }}
-                          >
-                            {period}
-                            {dateFilter === period && (
-                              <span className="ml-auto">✓</span>
-                            )}
-                          </DropdownMenuItem>
-                        )
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                 </div>
               </div>
-
               {filteredDonations.length > 0 ? (
                 <div className="space-y-5">
                   {filteredDonations.map((transaction) => (

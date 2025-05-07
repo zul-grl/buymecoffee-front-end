@@ -23,9 +23,35 @@ export async function POST(
         { status: 400 }
       );
     }
+
+    // First, get the profileId from the User table
+    const userQuery = `
+      SELECT "profileId" 
+      FROM "User" 
+      WHERE id = $1
+    `;
+
+    const userResult = await runQuery<{ profileId: number }>(userQuery, [
+      userId,
+    ]);
+
+    if (userResult.length === 0 || !userResult[0].profileId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "PROFILE_NOT_FOUND",
+          message: "No profile is associated with this user",
+        },
+        { status: 404 }
+      );
+    }
+
+    const profileId = userResult[0].profileId;
+
+    // Now get the profile using the profileId
     const profileQuery = `
       SELECT 
-      p.id,
+        p.id,
         p.name,
         p.about,
         p."socialMediaURL",
@@ -40,20 +66,22 @@ export async function POST(
 
     const bankCardQuery = `
       SELECT 
-      "id",
+        "id",
         "country",
         "firstName",
         "lastName",
         "cardNumber",
         "expiryDate",
-        "cvc"
+        "cvc",
+        "created_at",
+        "updated_at"
       FROM "BankCard"
       WHERE "userId" = $1
       LIMIT 1
     `;
 
     const [profileResult, bankCardResult] = await Promise.all([
-      runQuery<Profile>(profileQuery, [userId]),
+      runQuery<Profile>(profileQuery, [profileId]),
       runQuery<BankCard>(bankCardQuery, [userId]),
     ]);
 
@@ -62,7 +90,7 @@ export async function POST(
         {
           success: false,
           error: "PROFILE_NOT_FOUND",
-          message: "Profile not found for the specified user",
+          message: "Profile data not found even though user has profileId",
         },
         { status: 404 }
       );
@@ -82,18 +110,21 @@ export async function POST(
         created_at: profileResult[0].created_at,
         updated_at: profileResult[0].updated_at,
       },
-      bankCard: {
-        id: bankCardResult[0].id,
-        country: bankCardResult[0].country,
-        firstName: bankCardResult[0].firstName,
-        lastName: bankCardResult[0].lastName,
-        cardNumber: bankCardResult[0].cardNumber,
-        expiryDate: bankCardResult[0].expiryDate,
-        cvc: bankCardResult[0].cvc,
-        userId: userId,
-        created_at: bankCardResult[0].created_at,
-        updated_at: bankCardResult[0].updated_at,
-      },
+      bankCard:
+        bankCardResult.length > 0
+          ? {
+              id: bankCardResult[0].id,
+              country: bankCardResult[0].country,
+              firstName: bankCardResult[0].firstName,
+              lastName: bankCardResult[0].lastName,
+              cardNumber: bankCardResult[0].cardNumber,
+              expiryDate: bankCardResult[0].expiryDate,
+              cvc: bankCardResult[0].cvc,
+              userId: userId,
+              created_at: bankCardResult[0].created_at,
+              updated_at: bankCardResult[0].updated_at,
+            }
+          : undefined,
     };
 
     return NextResponse.json(

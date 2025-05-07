@@ -274,7 +274,10 @@ export default function AccountSettings() {
                 <p className="text-sm text-muted-foreground">Profile photo</p>
                 <label htmlFor="avatar-upload" className="cursor-pointer">
                   <Avatar className="h-24 w-24">
-                    <AvatarImage src={avatarPreview || profile?.avatarImage} />
+                    <AvatarImage
+                      className="object-cover"
+                      src={avatarPreview || profile?.avatarImage}
+                    />
                     <AvatarFallback>{profile?.name?.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <input
