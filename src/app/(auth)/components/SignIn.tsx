@@ -33,7 +33,7 @@ const SignIn = () => {
   }
 
   return (
-    <div className="w-[50vw] h-screen flex justify-center relative items-center">
+    <div className="max-w-[50vw] w-full h-screen flex justify-center relative items-center">
       <Link href={"/sign-up"}>
         <Button
           variant={"outline"}
@@ -42,7 +42,7 @@ const SignIn = () => {
           Sign up
         </Button>
       </Link>
-      <div className="p-6">
+      <div className="px-6 w-[400px]">
         <h3 className="text-2xl mb-6 font-bold">Welcome back</h3>
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">

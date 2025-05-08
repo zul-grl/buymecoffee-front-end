@@ -258,7 +258,7 @@ export default function AccountSettings() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-4 space-y-8">
+    <div className="max-w-3xl mx-auto p-4 space-y-8 max-h-[90vh] overflow-y-auto">
       <h1 className="text-2xl font-bold">Account Settings</h1>
       <Card>
         <CardHeader>

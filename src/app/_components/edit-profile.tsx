@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -36,7 +35,7 @@ const profileSchema = z.object({
   about: z.string().optional(),
   socialMediaURL: z.string().url("Invalid URL").or(z.literal("")).optional(),
   successMessage: z.string().optional(),
-  backgroundImage: z.string().optional(), 
+  backgroundImage: z.string().optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -147,7 +146,10 @@ export function EditProfileDialog({ trigger }: { trigger?: React.ReactNode }) {
                   className="cursor-pointer relative"
                 >
                   <Avatar className="h-24 w-24">
-                    <AvatarImage src={avatarPreview || undefined} />
+                    <AvatarImage
+                      className="object-cover"
+                      src={avatarPreview || undefined}
+                    />
                     <AvatarFallback>{profile?.name?.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div className="absolute bottom-0 right-0 bg-white rounded-full p-1 border hover:bg-gray-100">

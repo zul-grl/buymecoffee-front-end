@@ -228,6 +228,7 @@ export default function Home() {
                         <div className="flex gap-3">
                           <Avatar className="h-10 w-10">
                             <AvatarImage
+                              className="object-cover"
                               src={transaction.donorImage}
                               alt={transaction.donorName}
                             />

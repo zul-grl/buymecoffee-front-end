@@ -82,7 +82,7 @@ const SignUp = () => {
       )}
 
       {step === 1 ? (
-        <div className="p-6">
+        <div className="p-6 w-[400px]">
           <div className="flex flex-col gap-[6px] mb-6">
             <h3 className="text-2xl font-bold">Create Your Account</h3>
             <p className="text-muted-foreground text-[14px] font-medium">
@@ -109,7 +109,7 @@ const SignUp = () => {
           </Form>
         </div>
       ) : (
-        <div className="p-6">
+        <div className="p-6 w-[400px]">
           <div className="flex flex-col gap-[6px] mb-6">
             <h3 className="text-2xl font-bold">Welcome, {username}</h3>
             <p className="text-muted-foreground text-[14px] font-medium">

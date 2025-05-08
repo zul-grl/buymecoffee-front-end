@@ -139,6 +139,7 @@ export default function ViewPage() {
                 <div className="flex items-center gap-2 mb-4">
                   <Avatar className="h-10 w-10">
                     <AvatarImage
+                      className="object-cover"
                       src={profile?.avatarImage}
                       alt={profile?.name}
                     />
