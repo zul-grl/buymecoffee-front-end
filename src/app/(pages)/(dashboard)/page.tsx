@@ -28,7 +28,7 @@ export default function Home() {
     fetchReceivedDonations,
     fetchDonationStats,
   } = useDonation();
-  const { userId } = useUser();
+  const { userId, loading: userloading } = useUser();
   const { profile } = useProfile();
 
   const [earningsPeriod, setEarningsPeriod] = useState("Last 30 days");
@@ -39,11 +39,13 @@ export default function Home() {
   >([]);
   const [isClient, setIsClient] = useState(false);
   const router = useRouter();
+
   useEffect(() => {
-    if (!userId) {
+    if (!userloading && !userId) {
       router.push("/sign-in");
     }
-  }, [userId, router]);
+  }, [userId, userloading, router]);
+
   useEffect(() => {
     setIsClient(true);
     if (userId) {
@@ -93,11 +95,7 @@ export default function Home() {
     });
   };
 
-  if (loading && !donations.length && !profile) {
-    return <Loader />;
-  }
-
-  if (!isClient) {
+  if (loading && !donations.length && !profile && userloading && !isClient) {
     return <Loader />;
   }
 
