@@ -9,6 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import axios from "axios";
 import { Loader } from "@/app/_components/Loader";
+import { useProfile } from "@/app/context/ProfileContext";
+import { useUser } from "@/app/context/UserContext";
 
 interface Creator {
   id: number;
@@ -19,6 +21,7 @@ interface Creator {
   socialMediaURL: string;
   backgroundImage?: string;
   successMessage?: string;
+  userId?: number;
 }
 
 export default function Explore() {
@@ -26,6 +29,7 @@ export default function Explore() {
   const [creators, setCreators] = useState<Creator[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { profile } = useProfile();
 
   useEffect(() => {
     const fetchCreators = async () => {
@@ -34,7 +38,11 @@ export default function Explore() {
         const response = await axios.get("/api/profile/explore");
 
         if (response.data.success && response.data.data) {
-          setCreators(response.data.data);
+          // Filter out current user's profile by profile id
+          const filteredCreators = response.data.data.filter(
+            (creator: Creator) => creator.id !== profile?.id
+          );
+          setCreators(filteredCreators);
         } else {
           setError(response.data.message || "Failed to fetch creators");
         }
@@ -46,8 +54,11 @@ export default function Explore() {
       }
     };
 
-    fetchCreators();
-  }, []);
+    // Only fetch if profile is available
+    if (profile?.id) {
+      fetchCreators();
+    }
+  }, [profile?.id]);
 
   const filteredCreators = creators.filter((creator) => {
     const searchLower = searchTerm.toLowerCase();
